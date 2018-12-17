@@ -4,6 +4,7 @@ import 'bootstrap/dist/css/bootstrap-theme.css';
 import React, { Component } from "react";
 import axios from "axios";
 import {Grid, Row, Col, Thumbnail, Button, Badge, Navbar} from 'react-bootstrap';
+import Modal from './Modal';
 
 class App extends Component {
     // initialize our state
@@ -15,8 +16,16 @@ class App extends Component {
         intervalIsSet: true,
         idToDelete: null,
         idToUpdate: null,
-        objectToUpdate: null
+        objectToUpdate: null,
+        isOpen: false
     };
+
+    toggleModal = () => {
+        console.log(this.state.isOpen);
+        this.setState({
+            isOpen: !this.state.isOpen
+        });
+    }
 
     // when component mounts, first thing it does is fetch all existing data in our db
     // then we incorporate a polling logic so that we can easily see if our db has
@@ -174,6 +183,13 @@ class App extends Component {
 */}
         <Navbar>
         </Navbar>
+            <button onClick={this.toggleModal}>
+                Open the modal
+            </button>
+            <Modal show={this.state.isOpen}
+                   onClose={this.toggleModal}>
+                Here's some content for the modal
+            </Modal>
             <Grid>
                 <Row> {
                     products.map(product => (
