@@ -251,14 +251,27 @@ class App extends Component {
                     <div>
                         <h3 ref={subtitle => this.subtitle = subtitle}>Login</h3>
                         <Button bsStyle="link pull-right" onClick={this.toggleAdmin}>Admin</Button>
+                        <form class="form-signin">
+                            <h2 class="form-signin-heading">Please sign in</h2>
+                            <label for="inputEmail" class="sr-only">Email address</label>
+                            <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus/>>
+                            <label for="inputPassword" class="sr-only">Password</label>
+                            <input type="password" id="inputPassword" class="form-control" placeholder="Password" required/>
+                            <div class="checkbox">
+                            <label>
+                                <input type="checkbox" value="remember-me"/> Remember me
+                            </label>
+                            </div>
+                            <button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
+                        </form>
                     </div>
-                    <form>
+                    {/* <form>
                         <label>Username: </label>
                         <input value={this.state.userName} onChange={this.handleUserName}/><br/>
                         <label  hidden={!this.state.isAdmin}>Password: </label>
                         <input type="password" value={this.state.password} onChange={this.handlePassword} hidden={!this.state.isAdmin}/>
                         <Button bsStyle="primary" onClick={() => this.loginAttempt()}>Login</Button>
-                    </form>
+                    </form> */}
                 </Modal>
                 <Grid>
                     <Row> {
