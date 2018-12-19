@@ -3,28 +3,80 @@ import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/css/bootstrap-theme.css';
 import React, { Component } from "react";
 import axios from "axios";
-import {Grid, Row, Col, Thumbnail, Button, Badge, Navbar} from 'react-bootstrap';
-import Modal from './Modal';
+import { Grid, Row, Col, Thumbnail, Button, Badge, Navbar } from 'react-bootstrap';
+import Modal from 'react-modal';
+
+const customStyles = {
+    content : {
+      top                   : '50%',
+      left                  : '50%',
+      right                 : 'auto',
+      bottom                : 'auto',
+      marginRight           : '-50%',
+      transform             : 'translate(-50%, -50%)'
+    }
+};
+
+// Make sure to bind modal to your appElement (http://reactcommunity.org/react-modal/accessibility/)
+Modal.setAppElement(document.getElementById('root'));
 
 class App extends Component {
-    // initialize our state
-    state = {
-        data: [],
-        products: [],
-        id: 0,
-        message: null,
-        intervalIsSet: true,
-        idToDelete: null,
-        idToUpdate: null,
-        objectToUpdate: null,
-        isOpen: false
-    };
 
-    toggleModal = () => {
-        console.log(this.state.isOpen);
-        this.setState({
-            isOpen: !this.state.isOpen
-        });
+    constructor() {
+        super();
+        // initialize our state
+        this.state = {
+            data: [],
+            products: [],
+            id: 0,
+            message: null,
+            intervalIsSet: true,
+            idToDelete: null,
+            idToUpdate: null,
+            objectToUpdate: null,
+            modalIsOpen: true,
+            shouldCloseModal: true,
+            userName: 'userName',
+            password: '',
+        };
+        this.openModal = this.openModal.bind(this);
+        this.afterOpenModal = this.afterOpenModal.bind(this);
+        this.closeModal = this.closeModal.bind(this);
+    }
+
+    openModal() {
+        this.setState({ modalIsOpen: true });
+    }
+
+    afterOpenModal() {
+        // references are now sync'd and can be accessed.
+        this.subtitle.style.color = '#f00';
+    }
+
+    closeModal() {
+        this.setState({ modalIsOpen: false });
+    }
+
+    handleUserName = (e) => {
+        this.setState({userName: e.target.value});
+    }
+
+    handlePassword = (e) => {
+        this.setState({password: e.target.value});
+    }
+
+    loginAttempt() {
+        if (this.state.userName === 'valid') {
+            axios.post("/api/login", {
+                userName: this.state.userName,
+                password: this.state.password
+            });
+            this.setState({shouldCloseModal: true});
+            this.closeModal();
+        }
+        else {
+            this.setState({shouldCloseModal: false});
+        }
     }
 
     // when component mounts, first thing it does is fetch all existing data in our db
@@ -124,8 +176,8 @@ class App extends Component {
     render() {
         const { products } = this.state;
         return (
-        <div>
-            {/*
+            <div>
+                {/*
         <ul>
         {data.length <= 0
             ? "NO DB ENTRIES YET"
@@ -181,60 +233,71 @@ class App extends Component {
         </button>
         </div>
 */}
-        <Navbar>
-        </Navbar>
-            <button onClick={this.toggleModal}>
-                Open the modal
-            </button>
-            <Modal show={this.state.isOpen}
-                   onClose={this.toggleModal}>
-                Here's some content for the modal
-            </Modal>
-            <Grid>
-                <Row> {
-                    products.map(product => (
+                <Navbar>
+                    <Button bsStyle="primary pull-right" onClick={this.openModal}>Logout</Button>
+                </Navbar>
+                <Modal
+                    isOpen={this.state.modalIsOpen}
+                    onAfterOpen={this.afterOpenModal}
+                    onRequestClose={this.closeModal}
+                    shouldCloseOnOverlayClick={this.state.shouldCloseModal}
+                    style={customStyles}
+                    contentLabel="Login">
+
+                    <h2 ref={subtitle => this.subtitle = subtitle}>Login</h2>
+                    <form>
+                        <label>Username: </label>
+                        <input value={this.state.userName} onChange={this.handleUserName}/><br/>
+                        <label>Password: </label>
+                        <input type="password" value={this.state.password} onChange={this.handlePassword}/>
+                        <Button bsStyle="primary" onClick={() => this.loginAttempt()}>Login</Button>
+                    </form>
+                </Modal>
+                <Grid>
+                    <Row> {
+                        products.map(product => (
+                            <Col xs={6} md={3}>
+                                <Thumbnail src={product.picture} alt="242x200">
+                                    <h3>{product.displayName}</h3>
+                                    <h4>{product.price}<Badge className={'pull-right'}>0</Badge></h4>
+                                    <Button bsStyle="primary">Hinzufügen</Button>
+                                </Thumbnail>
+                            </Col>
+                        ))
+                    }
                         <Col xs={6} md={3}>
-                            <Thumbnail src={product.picture} alt="242x200">
-                                <h3>{product.displayName}</h3>
-                                <h4>{product.price}<Badge className={'pull-right'}>0</Badge></h4>
+                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
+                                <h3>Kaffee</h3>
+                                <h4>0.50 CHF<Badge className={'pull-right'}>0</Badge></h4>
                                 <Button bsStyle="primary">Hinzufügen</Button>
                             </Thumbnail>
                         </Col>
-                    ))
-                }
-                    <Col xs={6} md={3}>
-                        <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                            <h3>Kaffee</h3>
-                            <h4>0.50 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                            <Button bsStyle="primary">Hinzufügen</Button>
-                        </Thumbnail>
-                    </Col>
-                    <Col xs={6} md={3}>
-                        <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                            <h3>Tee</h3>
+                        <Col xs={6} md={3}>
+                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
+                                <h3>Tee</h3>
                                 <h4>0.40 CHF<Badge className={'pull-right'}>0</Badge></h4>
                                 <Button bsStyle="primary">Hinzufügen</Button>
-                        </Thumbnail>
-                    </Col>
-                    <Col xs={6} md={3}>
-                        <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                            <h3>Chips</h3>
-                            <h4>1.20 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                            <Button bsStyle="primary">Hinzufügen</Button>
-                        </Thumbnail>
-                    </Col>
-                    <Col xs={6} md={3}>
-                        <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                            <h3>Frucht</h3>
-                            <h4>1.00 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                            <Button bsStyle="primary">Hinzufügen</Button>
-                        </Thumbnail>
-                    </Col>
-                </Row>
-            </Grid>
-        </div>
+                            </Thumbnail>
+                        </Col>
+                        <Col xs={6} md={3}>
+                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
+                                <h3>Chips</h3>
+                                <h4>1.20 CHF<Badge className={'pull-right'}>0</Badge></h4>
+                                <Button bsStyle="primary">Hinzufügen</Button>
+                            </Thumbnail>
+                        </Col>
+                        <Col xs={6} md={3}>
+                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
+                                <h3>Frucht</h3>
+                                <h4>1.00 CHF<Badge className={'pull-right'}>0</Badge></h4>
+                                <Button bsStyle="primary">Hinzufügen</Button>
+                            </Thumbnail>
+                        </Col>
+                    </Row>
+                </Grid>
+            </div>
 
-    );
+        );
     }
 }
 

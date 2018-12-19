@@ -7,6 +7,8 @@ const Product = require("./dbModels/product");
 const User = require("./dbModels/user");
 const Order = require("./dbModels/order");
 const UserOrder = require("./dbModels/userOrders");
+// LDAP library, documented at http://ldapjs.org/client.html
+const ldap = require('ldapjs');
 
 const API_PORT = 3001;
 const app = express();
@@ -33,6 +35,55 @@ db.on("error", console.error.bind(console, "MongoDB connection error:"));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(logger("dev"));
+
+router.post("/login", (req, res) => {
+    const url = "ldap://hapa.ch";
+    let client = ldap.createClient({url: url});
+    let result = "";
+    const adSuffix = "dc=hapa,dc=ch";
+
+    client.bind(req.body.userName, req.body.password, err => {
+        if (err) {
+			result += "Reader bind failed " + err;
+			res.send(result);
+			return;
+        }
+        console.log("login works");
+    });
+
+    // Search AD for user
+    const searchOptions = {
+        scope: "sub",
+        filter: `(userPrincipalName=${req.body.userName})`
+    };
+
+    client.search(adSuffix,searchOptions,(err,res) => {
+        if (err) {
+			result += "Search failed " + err;
+			res.send(result);
+			return;
+        }
+    
+        res.on('searchEntry', entry => {
+            console.log(entry.object.name);
+        });
+        res.on('searchReference', referral => {
+            console.log('referral: ' + referral.uris.join());
+        });
+        res.on('error', err => {
+            console.error('error: ' + err.message);
+        });
+        res.on('end', result => {
+            console.log(result);
+        });
+    });
+    
+    // Wrap up
+    client.unbind( err => {
+        if (err) return res.json({ success: false, error: err });
+        return res.json({ success: true });
+    });
+});
 
 // this is our get method
 // this method fetches all available data in our database
@@ -123,20 +174,22 @@ deleteData = (which, req, res) => {
             });
             break;
         case "userOrder":
-            UserOrder.findOneAndDelete({userId: userId, productId: productId}, err => {
-                if (err) return res.send(err);
-                return res.json({ success: true });
-            });
-/*
             UserOrder.findOne({userId: userId}, (err, userOrder) => {
                 const index = userOrder.orders.findIndex(order => order.productId == productId);
                 if (index >= 0){
                     userOrder.orders.splice(index, 1);
                 }
-                if (err) return res.send(err);
-                return res.json({ success: true });
-            });
-*/
+				else {
+					UserOrder.deleteOne({userId: userId}, err => {
+						
+					});
+					return;
+				}
+				userOrder.save(err => {
+					if (err) return res.json({ success: false, error: err });
+					return res.json({ success: true });
+				});
+			});
             break;
     }
 };
@@ -212,16 +265,25 @@ putData = (which, req, res) => {
                     data.orders.push({productId: productId, count: 1});
                 }
                 else {
-                    const index = user.orders.findIndex(order => order.productId == productId);
-                    console.log(index);
-                    if (index < 0){
-                        data.orders.push({productId: productId, count: 1});
-                    }
-                    else {
-                        user.orders[index].count += 1;
-                        data.orders = user.orders;
-                        console.log(data.orders);
-                    }
+					if (user.orders == null || user.orders.length == 0){
+						console.log("user.orders null");
+						data.orders = [];
+						data.orders.push({productId: productId, count: 1});
+					}
+					else {
+						console.log("user.orders non-null");
+						data.orders = user.orders;
+					
+						const index = user.orders.findIndex(order => order.productId == productId);
+						console.log(index);
+						if (index < 0){
+							data.orders.push({productId: productId, count: 1});
+						}
+						else {
+							data.orders[index].count += 1;
+							console.log(data.orders);
+						}
+					}
                 }
             });
     }
