@@ -38,6 +38,7 @@ class App extends Component {
             shouldCloseModal: true,
             userName: 'userName',
             password: '',
+            isAdmin: false
         };
         this.openModal = this.openModal.bind(this);
         this.afterOpenModal = this.afterOpenModal.bind(this);
@@ -65,8 +66,12 @@ class App extends Component {
         this.setState({password: e.target.value});
     }
 
+    toggleAdmin = () => {
+        this.setState({isAdmin: !this.state.isAdmin});
+    };
+
     loginAttempt() {
-        if (this.state.userName === 'valid') {
+        if (this.state.userName != '') {
             axios.post("/api/login", {
                 userName: this.state.userName,
                 password: this.state.password
@@ -243,13 +248,15 @@ class App extends Component {
                     shouldCloseOnOverlayClick={this.state.shouldCloseModal}
                     style={customStyles}
                     contentLabel="Login">
-
-                    <h2 ref={subtitle => this.subtitle = subtitle}>Login</h2>
+                    <div>
+                        <h3 ref={subtitle => this.subtitle = subtitle}>Login</h3>
+                        <Button bsStyle="link pull-right" onClick={this.toggleAdmin}>Admin</Button>
+                    </div>
                     <form>
                         <label>Username: </label>
                         <input value={this.state.userName} onChange={this.handleUserName}/><br/>
-                        <label>Password: </label>
-                        <input type="password" value={this.state.password} onChange={this.handlePassword}/>
+                        <label  hidden={!this.state.isAdmin}>Password: </label>
+                        <input type="password" value={this.state.password} onChange={this.handlePassword} hidden={!this.state.isAdmin}/>
                         <Button bsStyle="primary" onClick={() => this.loginAttempt()}>Login</Button>
                     </form>
                 </Modal>

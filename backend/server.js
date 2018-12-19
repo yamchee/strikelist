@@ -44,9 +44,8 @@ router.post("/login", (req, res) => {
 
     client.bind(req.body.userName, req.body.password, err => {
         if (err) {
-			result += "Reader bind failed " + err;
-			res.send(result);
-			return;
+            console.log(err);
+			return ;
         }
         console.log("login works");
     });
