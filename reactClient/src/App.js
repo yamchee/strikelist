@@ -51,7 +51,7 @@ class App extends Component {
 
     afterOpenModal() {
         // references are now sync'd and can be accessed.
-        this.subtitle.style.color = '#f00';
+        //this.subtitle.style.color = '#f00';
     }
 
     closeModal() {
@@ -71,7 +71,7 @@ class App extends Component {
     };
 
     loginAttempt() {
-        if (this.state.userName != '') {
+        if (this.state.userName !== '') {
             axios.post("/api/login", {
                 userName: this.state.userName,
                 password: this.state.password
@@ -239,7 +239,7 @@ class App extends Component {
         </div>
 */}
                 <Navbar>
-                    <Button bsStyle="primary pull-right" onClick={this.openModal}>Logout</Button>
+                    <Button bsStyle="primary" onClick={this.openModal}>Logout</Button>
                 </Navbar>
                 <Modal
                     isOpen={this.state.modalIsOpen}
@@ -249,20 +249,25 @@ class App extends Component {
                     style={customStyles}
                     contentLabel="Login">
                     <div>
-                        <h3 ref={subtitle => this.subtitle = subtitle}>Login</h3>
-                        <Button bsStyle="link pull-right" onClick={this.toggleAdmin}>Admin</Button>
-                        <form class="form-signin">
-                            <h2 class="form-signin-heading">Please sign in</h2>
-                            <label for="inputEmail" class="sr-only">Email address</label>
-                            <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus/>>
-                            <label for="inputPassword" class="sr-only">Password</label>
-                            <input type="password" id="inputPassword" class="form-control" placeholder="Password" required/>
-                            <div class="checkbox">
-                            <label>
-                                <input type="checkbox" value="remember-me"/> Remember me
-                            </label>
+                        <Button className="pull-right" bsStyle="link" onClick={this.toggleAdmin}>Admin</Button><br/>
+                        <form className="form-signin">
+                            <h2 className="form-signin-heading">Please sign in</h2>
+                            <label htmlFor="inputEmail" className="sr-only">Email address</label>
+                            <input type="email" id="inputEmail" className="form-control"
+                                   value={this.state.userName} onChange={this.handleUserName}
+                                   placeholder="Email address" required autoFocus={true}/>
+                            <div className={this.state.isAdmin ? '' : 'hidden'}>
+                                <label htmlFor="inputPassword" className="sr-only">Password</label>
+                                <input type="password" id="inputPassword" className="form-control" value={this.state.password}
+                                       onChange={this.handlePassword}
+                                       placeholder="Password"/>
+                                <div className="checkbox">
+                                <label>
+                                    <input type="checkbox" value="remember-me"/> Remember me
+                                </label>
+                                </div>
                             </div>
-                            <button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
+                            <button className="btn btn-lg btn-primary btn-block" type="submit" onClick={() => this.loginAttempt()}>Login</button>
                         </form>
                     </div>
                     {/* <form>
