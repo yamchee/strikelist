@@ -35,7 +35,7 @@ class App extends Component {
             idToUpdate: null,
             objectToUpdate: null,
             modalIsOpen: true,
-            shouldCloseModal: true,
+            shouldCloseModal: false,
             userName: '',
             password: '',
             isAdmin: false,
@@ -194,70 +194,14 @@ class App extends Component {
         const { products } = this.state;
         return (
             <div>
-                {/*
-        <ul>
-        {data.length <= 0
-            ? "NO DB ENTRIES YET"
-            : data.map(dat => (
-                <li style={{ padding: "10px" }} key={data.message}>
-    <span style={{ color: "gray" }}> id: </span> {dat.id} <br />
-        <span style={{ color: "gray" }}> data: </span>
-        {dat.message}
-    </li>
-    ))}
-    </ul>
-        <div style={{ padding: "10px" }}>
-    <input
-        type="text"
-        onChange={e => this.setState({ message: e.target.value })}
-        placeholder="add something in the database"
-        style={{ width: "200px" }}
-        />
-        <button onClick={() => this.putDataToDB(this.state.message)}>
-        ADD
-        </button>
-        </div>
-        <div style={{ padding: "10px" }}>
-    <input
-        type="text"
-        style={{ width: "200px" }}
-        onChange={e => this.setState({ idToDelete: e.target.value })}
-        placeholder="put id of item to delete here"
-            />
-            <button onClick={() => this.deleteFromDB(this.state.idToDelete)}>
-        DELETE
-        </button>
-        </div>
-        <div style={{ padding: "10px" }}>
-    <input
-        type="text"
-        style={{ width: "200px" }}
-        onChange={e => this.setState({ idToUpdate: e.target.value })}
-        placeholder="id of item to update here"
-            />
-            <input
-        type="text"
-        style={{ width: "200px" }}
-        onChange={e => this.setState({ updateToApply: e.target.value })}
-        placeholder="put new value of the item here"
-            />
-            <button
-        onClick={() =>
-        this.updateDB(this.state.idToUpdate, this.state.updateToApply)
-    }
-    >
-        UPDATE
-        </button>
-        </div>
-*/}
                 <Navbar>
                     <Button bsStyle="primary" className="pull-right" onClick={this.openModal}>Logout</Button>
                 </Navbar>
                 <Modal
                     isOpen={this.state.modalIsOpen}
                     onAfterOpen={this.afterOpenModal}
-                    onRequestClose={this.closeModal}
                     shouldCloseOnOverlayClick={this.state.shouldCloseModal}
+                    closeOnEscape={this.state.shouldCloseModal}
                     style={customStyles}
                     contentLabel="Login">
                     <div>
@@ -286,13 +230,6 @@ class App extends Component {
                                     onClick={() => this.loginAttempt()}>Login</button>
                         </form>
                     </div>
-                    {/* <form>
-                        <label>Username: </label>
-                        <input value={this.state.userName} onChange={this.handleUserName}/><br/>
-                        <label  hidden={!this.state.isAdmin}>Password: </label>
-                        <input type="password" value={this.state.password} onChange={this.handlePassword} hidden={!this.state.isAdmin}/>
-                        <Button bsStyle="primary" onClick={() => this.loginAttempt()}>Login</Button>
-                    </form> */}
                 </Modal>
                 <Grid>
                     <Row> {
@@ -300,40 +237,12 @@ class App extends Component {
                             <Col xs={6} md={3}>
                                 <Thumbnail src={product.picture} alt="242x200">
                                     <h3>{product.displayName}</h3>
-                                    <h4>{product.price}<Badge className={'pull-right'}>0</Badge></h4>
+                                    <h4>{product.price.toFixed(2)} CHF<Badge className={'pull-right'}>0</Badge></h4>
                                     <Button bsStyle="primary">Hinzufügen</Button>
                                 </Thumbnail>
                             </Col>
                         ))
                     }
-                        <Col xs={6} md={3}>
-                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                                <h3>Kaffee</h3>
-                                <h4>0.50 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                                <Button bsStyle="primary">Hinzufügen</Button>
-                            </Thumbnail>
-                        </Col>
-                        <Col xs={6} md={3}>
-                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                                <h3>Tee</h3>
-                                <h4>0.40 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                                <Button bsStyle="primary">Hinzufügen</Button>
-                            </Thumbnail>
-                        </Col>
-                        <Col xs={6} md={3}>
-                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                                <h3>Chips</h3>
-                                <h4>1.20 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                                <Button bsStyle="primary">Hinzufügen</Button>
-                            </Thumbnail>
-                        </Col>
-                        <Col xs={6} md={3}>
-                            <Thumbnail src="https://via.placeholder.com/242x200" alt="242x200">
-                                <h3>Frucht</h3>
-                                <h4>1.00 CHF<Badge className={'pull-right'}>0</Badge></h4>
-                                <Button bsStyle="primary">Hinzufügen</Button>
-                            </Thumbnail>
-                        </Col>
                     </Row>
                 </Grid>
             </div>
