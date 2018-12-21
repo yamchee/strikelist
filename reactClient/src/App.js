@@ -36,9 +36,11 @@ class App extends Component {
             objectToUpdate: null,
             modalIsOpen: true,
             shouldCloseModal: true,
-            userName: 'userName',
+            userName: '',
             password: '',
-            isAdmin: false
+            isAdmin: false,
+            adminText: 'Admin',
+            canLogin: false
         };
         this.openModal = this.openModal.bind(this);
         this.afterOpenModal = this.afterOpenModal.bind(this);
@@ -59,6 +61,15 @@ class App extends Component {
     }
 
     handleUserName = (e) => {
+        let gp = document.getElementById("userGroupId");
+        if (e.target.value == "123"){
+            gp.classList.add("has-error");
+            this.setState({canLogin: false});
+        }
+        else {
+            gp.classList.remove("has-error");
+            this.setState({canLogin: true});
+        }
         this.setState({userName: e.target.value});
     }
 
@@ -68,20 +79,21 @@ class App extends Component {
 
     toggleAdmin = () => {
         this.setState({isAdmin: !this.state.isAdmin});
+        if (!this.state.isAdmin){
+            this.setState({adminText: 'Non-Admin'});
+        }
+        else {
+            this.setState({adminText: 'Admin'});
+        }
     };
 
     loginAttempt() {
-        if (this.state.userName !== '') {
-            axios.post("/api/login", {
-                userName: this.state.userName,
-                password: this.state.password
-            });
-            this.setState({shouldCloseModal: true});
-            this.closeModal();
-        }
-        else {
-            this.setState({shouldCloseModal: false});
-        }
+        axios.post("/api/login", {
+            userName: this.state.userName,
+            password: this.state.password
+        });
+        this.setState({shouldCloseModal: true});
+        this.closeModal();
     }
 
     // when component mounts, first thing it does is fetch all existing data in our db
@@ -239,7 +251,7 @@ class App extends Component {
         </div>
 */}
                 <Navbar>
-                    <Button bsStyle="primary" onClick={this.openModal}>Logout</Button>
+                    <Button bsStyle="primary" className="pull-right" onClick={this.openModal}>Logout</Button>
                 </Navbar>
                 <Modal
                     isOpen={this.state.modalIsOpen}
@@ -249,13 +261,15 @@ class App extends Component {
                     style={customStyles}
                     contentLabel="Login">
                     <div>
-                        <Button className="pull-right" bsStyle="link" onClick={this.toggleAdmin}>Admin</Button><br/>
-                        <form className="form-signin">
+                        <Button className="pull-right" bsStyle="link" onClick={this.toggleAdmin}>{this.state.adminText}</Button><br/>
+                        <form className="form-signin" noValidate={true}>
                             <h2 className="form-signin-heading">Please sign in</h2>
-                            <label htmlFor="inputEmail" className="sr-only">Email address</label>
-                            <input type="email" id="inputEmail" className="form-control"
-                                   value={this.state.userName} onChange={this.handleUserName}
-                                   placeholder="Email address" required autoFocus={true}/>
+                            <div className="form-group" id="userGroupId">
+                                <label htmlFor="inputEmail" className="sr-only">Email address</label>
+                                <input type="email" id="inputEmail" className="form-control"
+                                       value={this.state.userName} onChange={this.handleUserName}
+                                       placeholder="Kürzel" required autoFocus={true}/>
+                            </div>
                             <div className={this.state.isAdmin ? '' : 'hidden'}>
                                 <label htmlFor="inputPassword" className="sr-only">Password</label>
                                 <input type="password" id="inputPassword" className="form-control" value={this.state.password}
@@ -267,7 +281,9 @@ class App extends Component {
                                 </label>
                                 </div>
                             </div>
-                            <button className="btn btn-lg btn-primary btn-block" type="submit" onClick={() => this.loginAttempt()}>Login</button>
+                            <button className="btn btn-lg btn-primary btn-block"
+                                    type="submit" disabled={!this.state.canLogin}
+                                    onClick={() => this.loginAttempt()}>Login</button>
                         </form>
                     </div>
                     {/* <form>
