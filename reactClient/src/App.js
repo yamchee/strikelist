@@ -128,8 +128,8 @@ class App extends Component {
         // save to DB from cache.
         if (this.state.orderCache.length > 0){
             this.dialog.show({
-                title: 'Save Changes',
-                body: 'Changes have been made. Save?',
+                title: 'Save Changes and Logout',
+                body: 'Changes have been made. Save and logout?',
                 actions: [
                     Dialog.CancelAction(() => {
                         this.dialog.hide();
@@ -150,6 +150,9 @@ class App extends Component {
                     console.log('closed by clicking background.');
                 }
             });
+        } else {
+            this.setState(this.getInitialState());
+            this.openModal();
         }
     };
 
