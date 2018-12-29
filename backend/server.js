@@ -37,51 +37,76 @@ app.use(bodyParser.json());
 app.use(logger("dev"));
 
 router.post("/login", (req, res) => {
-    const url = "ldap://hapa.ch";
-    let client = ldap.createClient({url: url});
-    let result = "";
-    const adSuffix = "dc=hapa,dc=ch";
-
-    client.bind(req.body.userName, req.body.password, err => {
-        if (err) {
-            console.log(err);
-			return ;
-        }
-        console.log("login works");
+    User.findOne({userId: req.body.userId}, (err, user) => {
+        if (err || user == null) return res.json({ success: false, error: "User null or error" + err });
+        return res.json({ success: true, data: user });
     });
+});
 
-    // Search AD for user
-    const searchOptions = {
-        scope: "sub",
-        filter: `(userPrincipalName=${req.body.userName})`
-    };
+router.post("/loginAdmin", (req, res) => {
 
-    client.search(adSuffix,searchOptions,(err,res) => {
-        if (err) {
-			result += "Search failed " + err;
-			res.send(result);
-			return;
-        }
-    
-        res.on('searchEntry', entry => {
-            console.log(entry.object.name);
-        });
-        res.on('searchReference', referral => {
-            console.log('referral: ' + referral.uris.join());
-        });
-        res.on('error', err => {
-            console.error('error: ' + err.message);
-        });
-        res.on('end', result => {
-            console.log(result);
-        });
-    });
-    
-    // Wrap up
-    client.unbind( err => {
+    User.findOne({userId: req.body.userName}, (err, user) => {
         if (err) return res.json({ success: false, error: err });
-        return res.json({ success: true });
+
+        if (!user.isAdmin) {
+            return res.json({ success: false, error: 'Non-admin user' });
+        }
+
+        if (req.body.password == "1234"){
+            return res.json({success: true, data: user});
+        }
+        return res.json({ success: false, error: 'Wrong password' });
     });
+        /*
+        // try logging in as admin onto ldap.
+        const url = "ldap://hapa.ch";
+        let client = ldap.createClient({url: url});
+        let result = "";
+        const adSuffix = "dc=hapa,dc=ch";
+
+        client.bind(req.body.userName, req.body.password, err => {
+            if (err) {
+                console.log(err);
+                return ;
+            }
+            console.log("login works");
+        });
+
+        // Search AD for user
+        const searchOptions = {
+            scope: "sub",
+            filter: `(userPrincipalName=${req.body.userName})`
+        };
+
+        client.search(adSuffix,searchOptions,(err,res) => {
+            if (err) {
+                result += "Search failed " + err;
+                res.send(result);
+                return;
+            }
+
+            res.on('searchEntry', entry => {
+                console.log(entry.object.name);
+            });
+            res.on('searchReference', referral => {
+                console.log('referral: ' + referral.uris.join());
+            });
+            res.on('error', err => {
+                console.error('error: ' + err.message);
+            });
+            res.on('end', result => {
+                console.log(result);
+            });
+        });
+
+        // Wrap up
+        client.unbind( err => {
+            if (err) return res.json({ success: false, error: err });
+            return res.json({ success: true });
+        });
+
+    });
+    */
 });
 
 // this is our get method
@@ -102,9 +127,16 @@ router.get("/getUserOrders", (req, res) => {
     getData("userOrder", req, res);
 });
 
+router.get("/getSpecificUserOrders", (req, res) => {
+    getData("userOrderSpecific", req, res);
+});
+
 getData = (which, req, res) => {
     var resultsLambda = (err, data) => {
-        if (err) return res.json({ success: false, error: err });
+        if (err) {
+            console.log(err);
+            return res.json({ success: false, error: err });
+        }
         return res.json({ success: true, data: data });
     };
     switch (which) {
@@ -119,6 +151,10 @@ getData = (which, req, res) => {
             break;
         case "userOrder":
             UserOrder.find(resultsLambda);
+            break;
+        case "userOrderSpecific":
+            console.log(req.query.userId);
+            UserOrder.find({userId: req.query.userId}, resultsLambda);
             break;
     }
 };
@@ -149,6 +185,13 @@ router.delete("/deleteUser", (req, res) => {
 
 router.delete("/deleteUserOrder", (req, res) => {
     deleteData("userOrder", req, res);
+});
+
+router.delete("/deleteAllUserOrders", (req, res) => {
+    UserOrder.deleteMany({}, err => {
+        if (err) return res.json({ success: false, error: err });
+        return res.json({ success: true });
+    });
 });
 
 deleteData = (which, req, res) => {
@@ -248,44 +291,50 @@ putData = (which, req, res) => {
             data.photo = photo;
             break;
         case "userOrder":
-            data = new UserOrder();
             userId = req.body.userId;
             productId = req.body.productId;
-            if ((!userId && userId !== 0) || (!productId && productId !== 0)) {
+            data = new UserOrder();
+            data.userId = userId;
+            if ((!userId) || (!productId && productId !== 0)) {
                 return res.json({
                     success: false,
                     error: "INVALID INPUTS"
                 });
             }
-            data.userId = userId;
-            UserOrder.findOne({userId: userId}, (err, user) => {
-                if (user == null){
+            UserOrder.findOne({userId: userId}, (err, userOrder) => {
+                if (userOrder == null){
                     data.orders = [];
                     data.orders.push({productId: productId, count: 1});
+                    console.log(data);
                 }
                 else {
-					if (user.orders == null || user.orders.length == 0){
+                    data = userOrder;
+					if (data.orders == null || data.orders.length == 0){
 						console.log("user.orders null");
-						data.orders = [];
-						data.orders.push({productId: productId, count: 1});
+                        data.orders = [];
+                        data.orders.push({productId: productId, count: 1});
 					}
 					else {
 						console.log("user.orders non-null");
-						data.orders = user.orders;
-					
-						const index = user.orders.findIndex(order => order.productId == productId);
+						const index = data.orders.findIndex(order => order.productId == productId);
 						console.log(index);
 						if (index < 0){
-							data.orders.push({productId: productId, count: 1});
+                            data.orders.push({productId: productId, count: 1});
 						}
 						else {
-							data.orders[index].count += 1;
+                            data.orders[index].count += 1;
 							console.log(data.orders);
 						}
 					}
                 }
+                data.save(err => {
+                    if (err) return res.json({ success: false, error: err });
+                    return res.json({ success: true });
+                });
             });
+            return;
     }
+    console.log("saving data ... " + data);
     data.save(err => {
         if (err) return res.json({ success: false, error: err });
         return res.json({ success: true });

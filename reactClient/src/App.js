@@ -3,8 +3,10 @@ import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/css/bootstrap-theme.css';
 import React, { Component } from "react";
 import axios from "axios";
-import { Grid, Row, Col, Thumbnail, Button, Badge, Navbar } from 'react-bootstrap';
+import { Grid, Row, Col, Thumbnail, Button, Badge, Navbar, Nav, NavItem } from 'react-bootstrap';
 import Modal from 'react-modal';
+import Admin from './Admin';
+import Dialog from 'react-bootstrap-dialog';
 
 const customStyles = {
     content : {
@@ -25,9 +27,25 @@ class App extends Component {
     constructor() {
         super();
         // initialize our state
-        this.state = {
+        this.state = this.getInitialState();
+        this.openModal = this.openModal.bind(this);
+        this.closeModal = this.closeModal.bind(this);
+    }
+
+    openModal() {
+        this.setState({ modalIsOpen: true });
+    }
+    closeModal() {
+        this.setState({ modalIsOpen: false });
+    }
+
+    getInitialState = () => {
+        return {
             data: [],
             products: [],
+            users: [],
+            userOrders: [],
+            orderCache: [],
             id: 0,
             message: null,
             intervalIsSet: true,
@@ -40,29 +58,18 @@ class App extends Component {
             password: '',
             isAdmin: false,
             adminText: 'Admin',
-            canLogin: false
+            canLogin: false,
+            loggedInUserName: '',
+            userLoggedIn: false,
+            changesMade: false
         };
-        this.openModal = this.openModal.bind(this);
-        this.afterOpenModal = this.afterOpenModal.bind(this);
-        this.closeModal = this.closeModal.bind(this);
-    }
-
-    openModal() {
-        this.setState({ modalIsOpen: true });
-    }
-
-    afterOpenModal() {
-        // references are now sync'd and can be accessed.
-        //this.subtitle.style.color = '#f00';
-    }
-
-    closeModal() {
-        this.setState({ modalIsOpen: false });
-    }
-
+    };
     handleUserName = (e) => {
         let gp = document.getElementById("userGroupId");
-        if (e.target.value == "123"){
+        if (gp == null) {
+            return;
+        }
+        if (e.target.value === ""){
             gp.classList.add("has-error");
             this.setState({canLogin: false});
         }
@@ -71,37 +78,102 @@ class App extends Component {
             this.setState({canLogin: true});
         }
         this.setState({userName: e.target.value});
-    }
+    };
 
     handlePassword = (e) => {
         this.setState({password: e.target.value});
-    }
+    };
 
     toggleAdmin = () => {
         this.setState({isAdmin: !this.state.isAdmin});
+        let inp = document.getElementById("inputEmail");
         if (!this.state.isAdmin){
-            this.setState({adminText: 'Non-Admin'});
+            this.setState({adminText: 'Nicht-Admin'});
+            inp.placeholder = 'UserName';
         }
         else {
             this.setState({adminText: 'Admin'});
+            inp.placeholder = 'Kürzel';
         }
     };
 
-    loginAttempt() {
-        axios.post("/api/login", {
-            userName: this.state.userName,
-            password: this.state.password
-        });
-        this.setState({shouldCloseModal: true});
-        this.closeModal();
+    handleLoginResponse = (response) => {
+        let gp = document.getElementById("userGroupId");
+        if (!response.data.success) {
+            gp.classList.add("has-error");
+            this.setState({userLoggedIn: false});
+        }
+        else {
+            gp.classList.remove("has-error");
+            this.setState({loggedInUserName: response.data.data.shortName, shouldCloseModal: true, userLoggedIn: true});
+            this.closeModal();
+        }
+    };
+
+    loginAttempt = () => {
+        if (!this.state.isAdmin) {
+            axios.post("/api/login", {
+                userId: this.state.userName
+            }).then(this.handleLoginResponse);
+        }
+        else {
+            axios.post("/api/loginAdmin", {
+                userName: this.state.userName,
+                password: this.state.password
+            }).then(this.handleLoginResponse);
+        }
+    };
+
+    logout = () => {
+        // save to DB from cache.
+        if (this.state.orderCache.length > 0){
+            this.dialog.show({
+                title: 'Save Changes',
+                body: 'Changes have been made. Save?',
+                actions: [
+                    Dialog.CancelAction(() => {
+                        this.dialog.hide();
+                        this.setState(this.getInitialState());
+                        this.openModal();
+                    }),
+                    Dialog.OKAction(() => {
+                        this.state.orderCache.forEach(order =>
+                            axios.post("/api/putUserOrder", {userId: this.state.userName, productId: order.productId}));
+                        this.dialog.hide();
+                        this.setState(this.getInitialState());
+                        this.openModal();
+                    })
+                ],
+                bsSize: 'small',
+                onHide: (dialog) => {
+                    dialog.hide();
+                    console.log('closed by clicking background.');
+                }
+            });
+        }
+    };
+
+    isEmpty = (obj) => {
+        for(var prop in obj){
+            return false;
+        }
+        return true;
+    };
+
+    componentWillUpdate(nextprops, nextState) {
+        if (!this.state.userLoggedIn && this.state.userLoggedIn !== nextState.userLoggedIn){
+            this.getProductsForUserFromDb(this.state.userName);
+            this.getProductsFromDb();
+            this.getUsersFromDb();
+        }
     }
 
     // when component mounts, first thing it does is fetch all existing data in our db
     // then we incorporate a polling logic so that we can easily see if our db has
     // changed and implement those changes into our UI
     componentDidMount() {
-        this.getDataFromDb();
-        this.getProductsFromDb();
+        //this.getDataFromDb();
+        //this.getProductsFromDb();
         if (!this.state.intervalIsSet) {
             let interval = setInterval(this.getDataFromDb, 1000);
             this.setState({ intervalIsSet: interval });
@@ -134,6 +206,41 @@ class App extends Component {
         fetch("/api/getProducts")
             .then(d => d.json())
             .then(res => this.setState({ products: res.data }));
+    };
+
+    getUsersFromDb = () => {
+        fetch("/api/getUsers")
+            .then(d => d.json())
+            .then(res => this.setState({ users: res.data }));
+    };
+
+    getProductsForUserFromDb = (userId) => {
+        fetch("/api/getSpecificUserOrders?userId="+userId)
+            .then(d => d.json())
+            .then(res => {
+                if (res.data.length > 0) {
+                    this.setState({userOrders: res.data[0].orders});
+                }
+            });
+    };
+
+    addOrder = (order) => {
+        this.setState(prevState => ({
+            orderCache: [...prevState.orderCache, order]
+        }));
+        let orders = [...this.state.userOrders];
+        let index = orders.findIndex(uo => uo.productId === order.productId);
+        if (index < 0){
+            this.setState(prevState => ({
+                userOrders: [...prevState.userOrders, {productId: order.productId, count: 1}]
+            }));
+        }
+        else {
+            let userOrdersCopy = JSON.parse(JSON.stringify(this.state.userOrders));
+            let c = this.state.userOrders[index].count;
+            userOrdersCopy[index].count = c +1;
+            this.setState({ userOrders: userOrdersCopy });
+        }
     };
 
     // our put method that uses our backend api
@@ -191,11 +298,14 @@ class App extends Component {
     // it is easy to understand their functions when you
     // see them render into our screen
     render() {
-        const { products } = this.state;
+        const { products, users, userOrders } = this.state;
         return (
             <div>
                 <Navbar>
-                    <Button bsStyle="primary" className="pull-right" onClick={this.openModal}>Logout</Button>
+                    <Nav pullRight>
+                        <NavItem><p className="loginName">{this.state.loggedInUserName}</p></NavItem>
+                        <NavItem><Button bsStyle="primary" className="logout" onClick={this.logout}>Abmelden</Button></NavItem>
+                    </Nav>
                 </Navbar>
                 <Modal
                     isOpen={this.state.modalIsOpen}
@@ -207,7 +317,6 @@ class App extends Component {
                     <div>
                         <Button className="pull-right" bsStyle="link" onClick={this.toggleAdmin}>{this.state.adminText}</Button><br/>
                         <form className="form-signin" noValidate={true}>
-                            <h2 className="form-signin-heading">Please sign in</h2>
                             <div className="form-group" id="userGroupId">
                                 <label htmlFor="inputEmail" className="sr-only">Email address</label>
                                 <input type="email" id="inputEmail" className="form-control"
@@ -225,26 +334,36 @@ class App extends Component {
                                 </label>
                                 </div>
                             </div>
-                            <button className="btn btn-lg btn-primary btn-block"
-                                    type="submit" disabled={!this.state.canLogin}
-                                    onClick={() => this.loginAttempt()}>Login</button>
+                            <Button className="btn btn-lg btn-primary btn-block" bsStyle="primary"
+                                    disabled={!this.state.canLogin}
+                                    onClick={this.loginAttempt}>Anmelden</Button>
                         </form>
                     </div>
                 </Modal>
-                <Grid>
+                <Dialog ref={(el) => { this.dialog = el }} />
+                <Grid hidden={this.state.isAdmin === true}>
                     <Row> {
-                        products.map(product => (
-                            <Col xs={6} md={3}>
+                        products.map(product => {
+                            let userOrder = userOrders.find(uo => uo.productId === product.productId);
+                            return <Col xs={6} md={3} key={product.productId}>
                                 <Thumbnail src={product.picture} alt="242x200">
                                     <h3>{product.displayName}</h3>
-                                    <h4>{product.price.toFixed(2)} CHF<Badge className={'pull-right'}>0</Badge></h4>
-                                    <Button bsStyle="primary">Hinzufügen</Button>
+                                    <h4>
+                                        {product.price.toFixed(2)} CHF
+                                        <Badge className={'pull-right'}>{userOrder === undefined ? 0: userOrder.count}</Badge>
+                                    </h4>
+                                    <Button bsStyle="primary" onClick={() => this.addOrder(product)}>Hinzufügen</Button>
                                 </Thumbnail>
                             </Col>
-                        ))
+                            }
+                        )
                     }
                     </Row>
                 </Grid>
+                {
+                    this.state.modalIsOpen || !this.state.isAdmin || !this.state.userLoggedIn
+                    ? null : <Admin products={products} users={users}/>
+                }
             </div>
 
         );
