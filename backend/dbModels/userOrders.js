@@ -9,6 +9,10 @@ const UserOrdersSchema = new Schema(
             productId: Number,
             count: Number
         }]
+    }, {
+        timestamps: {
+            createdAt: true, updatedAt: true
+        }
     }
 );
 // export the new Schema so we could modify it using Node.js

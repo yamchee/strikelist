@@ -20,6 +20,14 @@ const pictureFormatter = (cell, row) => {
     );
 };
 
+const orderFormatter = (cell, row) => {
+    let str = "";
+    cell.forEach(pdt => str += "(" + pdt.productId + ", " + pdt.count + "), ");
+    return (
+        <p>{str}</p>
+    );
+}
+
 const productColumns = [{
     dataField: 'createdAt',
     text: 'Created at',
@@ -79,8 +87,45 @@ const userColumns = [{
     formatter: pictureFormatter
 }];
 
+const userOrderColumns = [{
+    dataField: 'createdAt',
+    text: 'Created at',
+    visibleColumnSize: 1,
+    formatter: dateFormatter
+}, {
+    dataField: 'updatedAt',
+    text: 'Updated at',
+    visibleColumnSize: 1,
+    formatter: dateFormatter
+}, {
+    dataField: 'userId',
+    text: 'User ID',
+    visibleColumnSize: 1
+}, {
+    dataField: 'orders',
+    text: 'All orders',
+    visibleColumnSize: 6,
+    formatter: orderFormatter
+}];
+
 
 class Admin extends Component {
+
+    constructor() {
+        super();
+
+        this.state = {
+          userOrders: [],
+          products:[]
+        };
+    }
+
+    componentDidMount() {
+        fetch("/api/getUserOrders")
+        .then(d => d.json())
+        .then(res => this.setState({userOrders: res.data}));
+    }
+
     render() {
         return (
             <div>
@@ -88,19 +133,18 @@ class Admin extends Component {
                     <Row className="clearfix">
                         <Col sm={2}>
                             <Nav bsStyle="pills" stacked>
-                                <NavItem eventKey="first">Products</NavItem>
+                                <NavItem eventKey="first">User Orders</NavItem>
                                 <NavItem eventKey="second">Users</NavItem>
+                                <NavItem eventKey="third">Products</NavItem>
                             </Nav>
                         </Col>
                         <Col sm={10}>
                             <Tab.Content animation>
                                 <Tab.Pane eventKey="first">
                                     <BootstrapTable
-                                        keyField="productId"
-                                        data={this.props.products}
-                                        columns={productColumns}
-                                        cellEdit={cellEditFactory({mode: 'click', blurToSave: true})}
-                                        insertRow={true}
+                                        keyField="userId"
+                                        data={this.state.userOrders}
+                                        columns={userOrderColumns}
                                     />
                                 </Tab.Pane>
                                 <Tab.Pane eventKey="second">
@@ -108,6 +152,15 @@ class Admin extends Component {
                                         keyField="userId"
                                         data={this.props.users}
                                         columns={userColumns}
+                                        cellEdit={cellEditFactory({mode: 'click', blurToSave: true})}
+                                        insertRow={true}
+                                    />
+                                </Tab.Pane>
+                                <Tab.Pane eventKey="third">
+                                    <BootstrapTable
+                                        keyField="productId"
+                                        data={this.props.products}
+                                        columns={productColumns}
                                         cellEdit={cellEditFactory({mode: 'click', blurToSave: true})}
                                         insertRow={true}
                                     />
